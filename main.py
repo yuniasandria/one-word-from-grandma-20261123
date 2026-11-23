@@ -22,9 +22,17 @@ def main() -> None:
     target.write_text(text, encoding="utf-8")
     # Read back and verify: the gate requires 1-30 UTF-8 characters, not
     # whitespace-only, so refuse to pass silently if the file ever differs.
+    # The post-write self-check also enforces the single-word shape on the
+    # bytes actually on disk (all-lowercase letters, exact byte length, no
+    # trailing newline or stray whitespace) so a truncated or padded write
+    # fails loudly instead of shipping a malformed entry.
     written = target.read_text(encoding="utf-8")
     if written != text:
         raise SystemExit("entry.txt did not round-trip as a single word")
+    if not written.isalpha() or not written.islower():
+        raise SystemExit("entry.txt must contain only lowercase letters")
+    if target.stat().st_size != len(text.encode("utf-8")):
+        raise SystemExit("entry.txt byte length does not match the entry")
 
 
 if __name__ == "__main__":
